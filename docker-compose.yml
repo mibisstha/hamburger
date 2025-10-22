@@ -1,7 +1,8 @@
 version: '3.8'
 services:
-  postgres:
+  my-database:
     image: postgres:16-alpine
+    container_name: my-database
     environment:
       POSTGRES_DB: mydb
       POSTGRES_USER: user
@@ -10,15 +11,26 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d mydb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  app:
-    build: .
+  my-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: my-api
     ports:
-      - "3000:3000"
+      - "4000:4000"
     environment:
-      DATABASE_URL: postgresql://user:password@postgres:5432/mydb
+      DATABASE_URL: postgresql://user:password@my-database:5432/mydb
+      NODE_ENV: development
+      PORT: 4000
     depends_on:
-      - postgres
+      my-database:
+        condition: service_healthy
 
 volumes:
   db_data:
